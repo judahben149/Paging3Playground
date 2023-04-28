@@ -7,12 +7,15 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.view.isVisible
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.paging.LoadState
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.judahben149.paging3trial.databinding.FragmentFirstBinding
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
@@ -39,16 +42,22 @@ class FirstFragment : Fragment() {
 
         initViews()
 
-        lifecycleScope.launchWhenCreated {
-            adapter?.loadStateFlow?.collect {
-                val state = it.refresh
-                binding.prgBar.isVisible = state is LoadState.Loading
+        //This handles main progress bar and initial loading
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                adapter?.loadStateFlow?.collect {
+                    val state = it.refresh
+                    binding.prgBar.isVisible = state is LoadState.Loading
+                }
             }
         }
 
-        lifecycleScope.launchWhenCreated {
-            viewModel.moviesList.collect { moviesList ->
-                adapter?.submitData(moviesList)
+        //This handles collection and submission of the movie List to the Paging Adapter
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.moviesList.collectLatest{ moviesList ->
+                    adapter?.submitData(moviesList)
+                }
             }
         }
 
